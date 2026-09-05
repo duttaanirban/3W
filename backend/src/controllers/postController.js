@@ -48,7 +48,96 @@ const getPosts = async (req, res) => {
   }
 };
 
+const toggleLike = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        message: "Post not found",
+      });
+    }
+
+    const existingLikeIndex = post.likes.findIndex(
+      (like) => like.userId.toString() === req.user.userId.toString()
+    );
+
+    if (existingLikeIndex !== -1) {
+      // Unlike
+      post.likes.splice(existingLikeIndex, 1);
+    } else {
+      // Like
+      post.likes.push({
+        userId: req.user.userId,
+        username: req.user.username,
+      });
+    }
+
+    await post.save();
+
+    res.json({
+      message:
+        existingLikeIndex !== -1
+          ? "Post unliked successfully"
+          : "Post liked successfully",
+      likes: post.likes,
+      likesCount: post.likes.length,
+    });
+  } catch (error) {
+    console.error("Like error:", error);
+
+    res.status(500).json({
+      message: "Server error while updating like",
+    });
+  }
+};
+
+const addComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+
+    if (!text?.trim()) {
+      return res.status(400).json({
+        message: "Comment cannot be empty",
+      });
+    }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({
+        message: "Post not found",
+      });
+    }
+
+    post.comments.push({
+      userId: req.user.userId,
+      username: req.user.username,
+      text: text.trim(),
+    });
+
+    await post.save();
+
+    res.status(201).json({
+      message: "Comment added successfully",
+      comments: post.comments,
+      commentsCount: post.comments.length,
+    });
+  } catch (error) {
+    console.error("Comment error:", error);
+
+    res.status(500).json({
+      message: "Server error while adding comment",
+    });
+  }
+};
+
 module.exports = {
   createPost,
   getPosts,
+  toggleLike,
+  addComment,
 };

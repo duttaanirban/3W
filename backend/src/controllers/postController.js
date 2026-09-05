@@ -120,6 +120,7 @@ const toggleLike = async (req, res) => {
         existingLikeIndex !== -1
           ? "Post unliked successfully"
           : "Post liked successfully",
+      post,
       likes: post.likes,
       likesCount: post.likes.length,
     });
@@ -161,6 +162,7 @@ const addComment = async (req, res) => {
 
     res.status(201).json({
       message: "Comment added successfully",
+      post,
       comments: post.comments,
       commentsCount: post.comments.length,
     });

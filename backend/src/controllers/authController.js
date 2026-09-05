@@ -28,8 +28,20 @@ const signup = async (req, res) => {
       password: hashedPassword,
     });
 
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
     res.status(201).json({
       message: "Account created successfully",
+      token,
       user: {
         id: user._id,
         username: user.username,

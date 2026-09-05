@@ -2,18 +2,20 @@ import axios from "axios";
 
 /**
  * ASSUMED BACKEND CONTRACT — edit here if your routes/response shapes differ.
- * Everything else in the app calls through these functions, so this is the
- * only file you should need to touch to match your real backend.
  *
  *   POST   /auth/signup   { username, email, password } -> { token, user: { _id, username, email } }
  *   POST   /auth/login    { email, password }            -> { token, user: { _id, username, email } }
- *   GET    /posts                                        -> { posts: [ post ] }
- *   POST   /posts         FormData(text?, image?)        -> { post }
- *   POST   /posts/:id/like                                -> { post }
- *   POST   /posts/:id/comments { text }                   -> { post }
+ *   GET    /posts                                        -> [ post ]
+ *   POST   /posts         FormData(text?, image?, poll?) -> post
+ *   POST   /posts/:id/like                                -> updated post   (toggles like for the current user)
+ *   POST   /posts/:id/comment { text }                    -> updated post
  *
  * post shape:
  *   { _id, username, text, image, likes: [username, ...], comments: [{ username, text, createdAt }], createdAt }
+ *
+ * `poll` is sent as a JSON string field: { options: [string, ...] }.
+ * Your backend doesn't have to support it — if it ignores unknown fields,
+ * everything else still works. It's not part of the original assignment spec.
  *
  * Auth: JWT returned from signup/login is sent back as `Authorization: Bearer <token>`.
  */
@@ -40,11 +42,12 @@ export const login = (email, password) =>
 
 export const getPosts = () => api.get("/posts").then((r) => r.data);
 
-export const createPost = (text, imageFile) => {
+export const createPost = (text, imageFile, poll) => {
   const formData = new FormData();
 
   if (text) formData.append("text", text);
   if (imageFile) formData.append("image", imageFile);
+  if (poll) formData.append("poll", JSON.stringify(poll));
 
   return api
     .post("/posts", formData, {

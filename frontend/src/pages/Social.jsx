@@ -32,8 +32,8 @@ function Social({ user, onLogout }) {
     loadPosts();
   }, []);
 
-  const handleCreatePost = async (text, imageFile) => {
-    const newPost = await createPost(text, imageFile);
+  const handleCreatePost = async (text, imageFile, poll) => {
+    const newPost = await createPost(text, imageFile, poll);
     setPosts((prev) => [newPost, ...prev]);
   };
 

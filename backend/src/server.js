@@ -11,19 +11,24 @@ const discoveryRoutes = require("./routes/discoveryRoutes");
 
 const app = express();
 
+const normalizeOrigin = (origin) => origin.trim().replace(/\/$/, "");
+
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
-  .map((origin) => origin.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      const normalizedOrigin = origin ? normalizeOrigin(origin) : "";
+
+      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("CORS origin is not allowed"));
+      console.warn(`Blocked CORS origin: ${origin}`);
+      return callback(null, false);
     },
   })
 );

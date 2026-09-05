@@ -1,4 +1,5 @@
 const Post = require("../models/Post");
+const Notification = require("../models/Notification");
 const cloudinary = require("../config/cloudinary");
 
 const createPost = async (req, res) => {
@@ -315,6 +316,17 @@ const toggleLike = async (req, res) => {
 
     await post.save();
 
+    if (existingLikeIndex === -1 && String(post.userId) !== String(req.user.userId)) {
+      await Notification.create({
+        recipientId: post.userId,
+        actorId: req.user.userId,
+        actorUsername: req.user.username,
+        postId: post._id,
+        type: "like",
+        text: `${req.user.username} liked your post.`,
+      });
+    }
+
     res.json({
       message:
         existingLikeIndex !== -1
@@ -359,6 +371,17 @@ const addComment = async (req, res) => {
     });
 
     await post.save();
+
+    if (String(post.userId) !== String(req.user.userId)) {
+      await Notification.create({
+        recipientId: post.userId,
+        actorId: req.user.userId,
+        actorUsername: req.user.username,
+        postId: post._id,
+        type: "comment",
+        text: `${req.user.username} commented on your post.`,
+      });
+    }
 
     res.status(201).json({
       message: "Comment added successfully",

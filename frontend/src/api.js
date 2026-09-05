@@ -122,4 +122,7 @@ export const getCommunities = () =>
 export const getNotifications = () =>
   api.get("/notifications").then((r) => r.data);
 
+export const markNotificationRead = (notificationId) =>
+  api.patch(`/notifications/${notificationId}/read`).then((r) => r.data);
+
 export default api;

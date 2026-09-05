@@ -4,7 +4,14 @@ import NotificationsNone from "@mui/icons-material/NotificationsNone";
 import Search from "@mui/icons-material/Search";
 import Logout from "@mui/icons-material/Logout";
 
-function TopBar({ user, onLogout, notifications, searchQuery, onSearchChange }) {
+function TopBar({
+  user,
+  onLogout,
+  notifications,
+  onMarkNotificationRead,
+  searchQuery,
+  onSearchChange,
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef(null);
@@ -60,7 +67,16 @@ function TopBar({ user, onLogout, notifications, searchQuery, onSearchChange }) 
               ) : (
                 notifications.slice(0, 8).map((n) => (
                   <div key={n._id} className={`notif-item ${n.read ? "" : "unread"}`}>
-                    {n.text}
+                    <span>{n.text}</span>
+                    {!n.read && (
+                      <button
+                        type="button"
+                        className="notif-read-button"
+                        onClick={() => onMarkNotificationRead(n._id)}
+                      >
+                        Mark as read
+                      </button>
+                    )}
                   </div>
                 ))
               )}

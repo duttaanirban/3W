@@ -277,11 +277,30 @@
   color: var(--muted);
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .notif-item.unread {
   color: var(--text);
   font-weight: 600;
+}
+
+.notif-read-button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 11px;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.notif-read-button:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
 }
 
 .notif-item:last-child {

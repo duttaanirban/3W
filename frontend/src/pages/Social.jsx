@@ -23,6 +23,7 @@ import {
   getTrendingTopics,
   getCommunities,
   getNotifications,
+  markNotificationRead,
 } from "../api";
 
 function Social({ user, onLogout }) {
@@ -49,7 +50,14 @@ function Social({ user, onLogout }) {
     getSuggestions().then(setSuggestions).catch(() => {});
     getTrendingTopics().then(setTrending).catch(() => {});
     getCommunities().then(setCommunities).catch(() => {});
-    getNotifications().then(setNotifications).catch(() => {});
+
+    const loadNotifications = () => {
+      getNotifications().then(setNotifications).catch(() => {});
+    };
+
+    loadNotifications();
+    const notificationRefresh = setInterval(loadNotifications, 15000);
+    return () => clearInterval(notificationRefresh);
   }, []);
 
   // Feed — reloads whenever the tab or community filter changes.
@@ -144,6 +152,28 @@ function Social({ user, onLogout }) {
     setTheme(nextTheme);
   };
 
+  const handleMarkNotificationRead = async (notificationId) => {
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification._id === notificationId
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+
+    try {
+      await markNotificationRead(notificationId);
+    } catch {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification._id === notificationId
+            ? { ...notification, read: false }
+            : notification
+        )
+      );
+    }
+  };
+
   const visiblePosts = searchQuery.trim()
     ? posts.filter((p) =>
         (p.text || "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
@@ -192,6 +222,7 @@ function Social({ user, onLogout }) {
         user={user}
         onLogout={onLogout}
         notifications={notifications}
+        onMarkNotificationRead={handleMarkNotificationRead}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />

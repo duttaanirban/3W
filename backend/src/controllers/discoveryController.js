@@ -1,4 +1,5 @@
 const Post = require("../models/Post");
+const Notification = require("../models/Notification");
 
 const getTrendingTopics = async (req, res) => {
   const posts = await Post.find({ text: /#/ }).select("text").lean();
@@ -31,7 +32,34 @@ const getCommunities = async (req, res) => {
 };
 
 const getNotifications = async (req, res) => {
-  res.json([]);
+  const notifications = await Notification.find({ recipientId: req.user.userId })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .select("text read createdAt")
+    .lean();
+
+  res.json(notifications);
 };
 
-module.exports = { getTrendingTopics, getCommunities, getNotifications };
+const markNotificationRead = async (req, res) => {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id, recipientId: req.user.userId },
+    { read: true },
+    { new: true }
+  )
+    .select("text read createdAt")
+    .lean();
+
+  if (!notification) {
+    return res.status(404).json({ message: "Notification not found" });
+  }
+
+  res.json(notification);
+};
+
+module.exports = {
+  getTrendingTopics,
+  getCommunities,
+  getNotifications,
+  markNotificationRead,
+};

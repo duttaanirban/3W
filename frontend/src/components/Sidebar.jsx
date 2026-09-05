@@ -4,7 +4,14 @@ import PeopleAltOutlined from "@mui/icons-material/PeopleAltOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import Tag from "@mui/icons-material/Tag";
 
-function Sidebar({ activeView, onChangeView, communities, activeCommunity, onSelectCommunity }) {
+function Sidebar({
+  activeView,
+  onChangeView,
+  onRequestCreatePost,
+  communities,
+  activeCommunity,
+  onSelectCommunity,
+}) {
   const navItems = [
     { id: "home", icon: HomeOutlined, label: "Home" },
     { id: "people", icon: PeopleAltOutlined, label: "People" },
@@ -53,7 +60,12 @@ function Sidebar({ activeView, onChangeView, communities, activeCommunity, onSel
       <div className="sidebar-cta">
         <h3>Keep Building</h3>
         <p>Ideas turn into impact when shared.</p>
-        <button onClick={() => onChangeView("home")}>
+        <button
+          onClick={() => {
+            onChangeView("home");
+            onRequestCreatePost();
+          }}
+        >
           Create a Post <span>→</span>
         </button>
       </div>

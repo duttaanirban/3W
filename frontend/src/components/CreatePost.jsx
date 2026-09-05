@@ -5,7 +5,7 @@ import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import PollOutlined from "@mui/icons-material/PollOutlined";
 import SendRounded from "@mui/icons-material/SendRounded";
 
-function CreatePost({ username, onCreatePost }) {
+function CreatePost({ username, onCreatePost, focusRequest }) {
   const [text, setText] = useState("");
   const [media, setMedia] = useState(null);
   const [mediaError, setMediaError] = useState("");
@@ -27,6 +27,10 @@ function CreatePost({ username, onCreatePost }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (focusRequest > 0) textareaRef.current?.focus();
+  }, [focusRequest]);
 
   const addEmoji = (emoji) => {
     const textarea = textareaRef.current;

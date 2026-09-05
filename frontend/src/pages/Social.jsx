@@ -30,6 +30,7 @@ function Social({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("all");
   const [activeCommunity, setActiveCommunity] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [createPostFocusRequest, setCreatePostFocusRequest] = useState(0);
 
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -199,6 +200,7 @@ function Social({ user, onLogout }) {
         <Sidebar
           activeView={activeView}
           onChangeView={setActiveView}
+          onRequestCreatePost={() => setCreatePostFocusRequest((count) => count + 1)}
           communities={communities}
           activeCommunity={activeCommunity}
           onSelectCommunity={(id) => {
@@ -233,7 +235,11 @@ function Social({ user, onLogout }) {
             </div>
           ) : (
             <>
-              <CreatePost username={user?.username} onCreatePost={handleCreatePost} />
+              <CreatePost
+                username={user?.username}
+                onCreatePost={handleCreatePost}
+                focusRequest={createPostFocusRequest}
+              />
 
               <FeedTabs active={activeTab} onChange={setActiveTab} />
 

@@ -6,30 +6,33 @@ import "./App.css";
 
 function App() {
   const [user, setUser] = useState(() => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    const token = sessionStorage.getItem("token");
+    const storedUser = sessionStorage.getItem("user");
 
     if (!token || !storedUser) return null;
 
     try {
       return JSON.parse(storedUser);
     } catch {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
       return null;
     }
   });
   const [view, setView] = useState("login"); // "login" | "signup"
 
   const handleAuthSuccess = ({ token, user: loggedInUser }) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(loggedInUser));
+    sessionStorage.setItem("token", token);
+    sessionStorage.setItem("user", JSON.stringify(loggedInUser));
     setUser(loggedInUser);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     setUser(null);
     setView("login");
   };

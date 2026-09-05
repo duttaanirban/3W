@@ -6,7 +6,7 @@ const upload = multer({
   storage,
 
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 25 * 1024 * 1024,
   },
 
   fileFilter: (req, file, cb) => {
@@ -16,9 +16,12 @@ const upload = multer({
       "image/png",
       "image/gif",
       "image/webp",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
     ];
 
-    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp)$/i;
+    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov)$/i;
 
     const isValidMimeType = allowedMimeTypes.includes(file.mimetype);
     const isValidExtension = allowedExtensions.test(file.originalname);
@@ -26,7 +29,7 @@ const upload = multer({
     if (isValidMimeType || isValidExtension) {
       cb(null, true);
     } else {
-      cb(new Error("Only JPG, JPEG, PNG, GIF, and WEBP images are allowed"));
+      cb(new Error("Only JPG, JPEG, PNG, GIF, WEBP, MP4, WEBM, and MOV files are allowed"));
     }
   },
 });

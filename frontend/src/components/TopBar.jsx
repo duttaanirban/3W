@@ -1,18 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import NotificationsNone from "@mui/icons-material/NotificationsNone";
+import Search from "@mui/icons-material/Search";
 import Logout from "@mui/icons-material/Logout";
 
-function TopBar({ user, onLogout }) {
+function TopBar({ user, onLogout, notifications, searchQuery, onSearchChange }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef(null);
+  const notifRef = useRef(null);
 
   const username = user?.username || "User";
   const initial = username.charAt(0).toUpperCase();
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
       }
     };
 
@@ -21,24 +29,53 @@ function TopBar({ user, onLogout }) {
   }, []);
 
   return (
-    <div className="navbar-shell">
-      <nav className="navbar-pill">
-        <span className="navbar-brand">Social</span>
+    <header className="topbar">
+      <span className="navbar-brand">Social</span>
+
+      <div className="topbar-search">
+        <Search aria-hidden="true" />
+        <input
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search for people, posts, or topics..."
+        />
+      </div>
+
+      <div className="topbar-right">
+        <div className="notif-wrap" ref={notifRef}>
+          <button
+            className="icon-btn"
+            onClick={() => setNotifOpen((prev) => !prev)}
+          >
+            <NotificationsNone aria-hidden="true" />
+            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+          </button>
+
+          {notifOpen && (
+            <div className="notif-dropdown">
+              <div className="notif-dropdown-heading">Notifications</div>
+
+              {notifications.length === 0 ? (
+                <p className="sidebar-empty">You're all caught up.</p>
+              ) : (
+                notifications.slice(0, 8).map((n) => (
+                  <div key={n._id} className={`notif-item ${n.read ? "" : "unread"}`}>
+                    {n.text}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="navbar-profile" ref={menuRef}>
           <button
             className="navbar-profile-trigger"
             onClick={() => setMenuOpen((prev) => !prev)}
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            title="Open account menu"
           >
             <span className="navbar-avatar">{initial}</span>
             <span className="navbar-username">{username}</span>
-            <KeyboardArrowDown
-              className={`navbar-chevron ${menuOpen ? "open" : ""}`}
-              aria-hidden="true"
-            />
+            <KeyboardArrowDown className={`navbar-chevron ${menuOpen ? "open" : ""}`} aria-hidden="true" />
           </button>
 
           {menuOpen && (
@@ -51,18 +88,15 @@ function TopBar({ user, onLogout }) {
                 </div>
               </div>
 
-              <button
-                className="navbar-dropdown-item logout"
-                onClick={onLogout}
-              >
+              <button className="navbar-dropdown-item logout" onClick={onLogout}>
                 <Logout aria-hidden="true" />
                 Logout
               </button>
             </div>
           )}
         </div>
-      </nav>
-    </div>
+      </div>
+    </header>
   );
 }
 

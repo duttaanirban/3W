@@ -1,32 +1,90 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmojiEmotionsOutlined from "@mui/icons-material/EmojiEmotionsOutlined";
+import EmojiPicker from "emoji-picker-react";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import PollOutlined from "@mui/icons-material/PollOutlined";
 import SendRounded from "@mui/icons-material/SendRounded";
 
-function CreatePost({ onCreatePost }) {
+function CreatePost({ username, onCreatePost }) {
   const [text, setText] = useState("");
-  const [image, setImage] = useState(null);
+  const [media, setMedia] = useState(null);
+  const [mediaError, setMediaError] = useState("");
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [submitting, setSubmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
-  const handleImage = (e) => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const addEmoji = (emoji) => {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? text.length;
+    const end = textarea?.selectionEnd ?? text.length;
+    const nextText = `${text.slice(0, start)}${emoji}${text.slice(end)}`;
+
+    setText(nextText);
+    setShowEmojiPicker(false);
+
+    requestAnimationFrame(() => {
+      textarea?.focus();
+      const cursorPosition = start + emoji.length;
+      textarea?.setSelectionRange(cursorPosition, cursorPosition);
+    });
+  };
+
+  const handleMedia = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImage({ file, preview: URL.createObjectURL(file) });
+    setMediaError("");
+    if (file.size > 25 * 1024 * 1024) {
+      setMediaError("Files must be smaller than 25 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    const nextMedia = { file, preview, isVideo: file.type.startsWith("video/") };
+
+    if (nextMedia.isVideo) {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        if (video.duration > 60) {
+          URL.revokeObjectURL(preview);
+          setMediaError("Videos must be 60 seconds or shorter.");
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+        setMedia(nextMedia);
+      };
+      video.src = preview;
+      return;
+    }
+
+    setMedia(nextMedia);
   };
 
-  const removeImage = () => {
-    setImage(null);
+  const removeMedia = () => {
+    if (media?.preview) URL.revokeObjectURL(media.preview);
+    setMedia(null);
+    setMediaError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const togglePoll = () => {
-    setShowPoll((prev) => !prev);
-  };
+  const togglePoll = () => setShowPoll((prev) => !prev);
 
   const updatePollOption = (index, value) => {
     setPollOptions((prev) => prev.map((opt, i) => (i === index ? value : opt)));
@@ -54,14 +112,14 @@ function CreatePost({ onCreatePost }) {
     const cleanOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
     const poll = showPoll && cleanOptions.length >= 2 ? { options: cleanOptions } : null;
 
-    if (!trimmedText && !image && !poll) return; // need at least one of text/image/poll
+    if (!trimmedText && !media && !poll) return;
 
     setSubmitting(true);
 
     try {
-      await onCreatePost(trimmedText, image?.file || null, poll);
+      await onCreatePost(trimmedText, media?.file || null, poll);
       setText("");
-      removeImage();
+      removeMedia();
       resetPoll();
     } finally {
       setSubmitting(false);
@@ -69,33 +127,39 @@ function CreatePost({ onCreatePost }) {
   };
 
   const canSubmit =
-    (text.trim() || image || (showPoll && pollOptions.filter((o) => o.trim()).length >= 2)) &&
+    (text.trim() || media || (showPoll && pollOptions.filter((o) => o.trim()).length >= 2)) &&
     !submitting;
 
   return (
     <form className="create-post" onSubmit={handleSubmit}>
-      <div className="create-post-heading">
-        <h2>Create Post</h2>
-        <span className="all-posts-pill">All Posts</span>
-      </div>
+      <div className="create-post-row">
+        <div className="avatar avatar-medium">
+          {(username || "U").charAt(0).toUpperCase()}
+        </div>
 
-      <div className="create-post-top">
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="What's on your mind?"
-          rows={2}
+          placeholder={`What's on your mind, ${username || ""}?`}
+          rows={1}
         />
       </div>
 
-      {image && (
+      {media && (
         <div className="image-preview">
-          <img src={image.preview} alt="Preview" />
-          <button type="button" onClick={removeImage}>
+          {media.isVideo ? (
+            <video src={media.preview} controls muted />
+          ) : (
+            <img src={media.preview} alt="Preview" />
+          )}
+          <button type="button" onClick={removeMedia}>
             ×
           </button>
         </div>
       )}
+
+      {mediaError && <p className="media-error">{mediaError}</p>}
 
       {showPoll && (
         <div className="poll-builder">
@@ -133,45 +197,56 @@ function CreatePost({ onCreatePost }) {
         </div>
       )}
 
-      <div className="create-post-divider" />
-
       <div className="create-post-bottom">
         <div className="post-tools">
           <button
             type="button"
-            className="tool-icon"
+            className="tool-label"
             onClick={() => fileInputRef.current?.click()}
-            title="Add photo"
-            aria-label="Add photo"
           >
             <PhotoCameraOutlined aria-hidden="true" />
+            Photo / Video
           </button>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
-            onChange={handleImage}
+            accept="image/*,video/mp4,video/webm,video/quicktime"
+            onChange={handleMedia}
             hidden
           />
 
-          <button
-            type="button"
-            className="tool-icon"
-            title="Add feeling"
-            aria-label="Add feeling"
-          >
+          <div className="emoji-picker-wrap" ref={emojiPickerRef}>
+            <button
+              type="button"
+              className={`tool-label ${showEmojiPicker ? "active" : ""}`}
+              onClick={() => setShowEmojiPicker((open) => !open)}
+              aria-label="Add emoji"
+              aria-expanded={showEmojiPicker}
+            >
             <EmojiEmotionsOutlined aria-hidden="true" />
-          </button>
+            Emoji
+            </button>
+
+            {showEmojiPicker && (
+              <div className="emoji-picker" role="dialog" aria-label="Emoji picker">
+                <EmojiPicker
+                  onEmojiClick={(emojiData) => addEmoji(emojiData.emoji)}
+                  searchPlaceholder="Search emojis"
+                  previewConfig={{ showPreview: false }}
+                  lazyLoadEmojis
+                />
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
-            className={`tool-icon ${showPoll ? "active" : ""}`}
+            className={`tool-label ${showPoll ? "active" : ""}`}
             onClick={togglePoll}
-            title="Create a poll"
-            aria-label="Create a poll"
           >
             <PollOutlined aria-hidden="true" />
+            Poll
           </button>
         </div>
 

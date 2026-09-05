@@ -1,31 +1,47 @@
 import { useState } from "react";
+import Bookmark from "@mui/icons-material/Bookmark";
+import BookmarkBorder from "@mui/icons-material/BookmarkBorder";
+import CommentOutlined from "@mui/icons-material/CommentOutlined";
+import DeleteForeverOutlined from "@mui/icons-material/DeleteForeverOutlined";
+import EditOutlined from "@mui/icons-material/EditOutlined";
+import Favorite from "@mui/icons-material/Favorite";
+import FavoriteBorder from "@mui/icons-material/FavoriteBorder";
+import MoreVert from "@mui/icons-material/MoreVert";
+import SendRounded from "@mui/icons-material/SendRounded";
 import CommentSection from "./CommentSection";
 
 function PostCard({
   post,
   currentUsername,
+  currentUserId,
   onToggleLike,
   onAddComment,
+  onToggleSave,
   onVotePoll,
+  onUpdatePost,
+  onDeletePost,
+  hidePostMenu = false,
 }) {
   const [showComments, setShowComments] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [voting, setVoting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftText, setDraftText] = useState(post.text || "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [renderedAt] = useState(() => Date.now());
 
   const likes = post.likes || [];
   const comments = post.comments || [];
-  const pollOptions = post.poll?.options || [];
-  const totalVotes = pollOptions.reduce(
-    (total, option) => total + (option.votes?.length || 0),
-    0
-  );
-  const selectedOption = pollOptions.find((option) =>
-    option.votes?.some((vote) => vote.username === currentUsername)
-  );
   const hasLiked = currentUsername
-    ? likes.some((like) => like.username === currentUsername)
+    ? likes.some((like) =>
+        typeof like === "string" ? like === currentUsername : like.username === currentUsername
+      )
     : false;
+  const postUserId = post.userId?._id || post.userId;
+  const isOwner = currentUserId && String(postUserId) === String(currentUserId);
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -34,18 +50,17 @@ function PostCard({
     const minutes = Math.floor(diff / 60000);
 
     if (minutes < 1) return "now";
-    if (minutes < 60) return `${minutes}m`;
+    if (minutes < 60) return `${minutes}m ago`;
 
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
+    if (hours < 24) return `${hours}h ago`;
 
-    return `${Math.floor(hours / 24)}d`;
+    return `${Math.floor(hours / 24)}d ago`;
   };
 
   const handleLike = async () => {
     if (liking) return;
     setLiking(true);
-
     try {
       await onToggleLike(post._id);
     } finally {
@@ -53,14 +68,66 @@ function PostCard({
     }
   };
 
-  const handleVote = async (optionId) => {
-    if (voting || selectedOption) return;
-    setVoting(true);
+  const handleSave = async () => {
+    if (saving) return;
+    setActionError("");
+    setSaving(true);
+    try {
+      await onToggleSave(post._id);
+    } catch (error) {
+      setActionError(
+        error.response?.data?.message || "Could not save this post."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  const handleVote = async (optionId) => {
+    if (voting) return;
+    setVoting(true);
     try {
       await onVotePoll(post._id, optionId);
     } finally {
       setVoting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    setActionError("");
+    setDraftText(post.text || "");
+    setEditing(true);
+    setMenuOpen(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!draftText.trim()) return;
+    setActionError("");
+    try {
+      await onUpdatePost(post._id, draftText.trim());
+      setEditing(false);
+    } catch (error) {
+      setActionError(
+        error.response?.data?.message || "Could not update this post."
+      );
+    }
+  };
+
+  const handleDelete = async () => {
+    setMenuOpen(false);
+    setConfirmDelete(true);
+  };
+
+  const confirmPostDelete = async () => {
+    setActionError("");
+    try {
+      await onDeletePost(post._id);
+      setConfirmDelete(false);
+    } catch (error) {
+      setConfirmDelete(false);
+      setActionError(
+        error.response?.data?.message || "Could not delete this post."
+      );
     }
   };
 
@@ -75,9 +142,61 @@ function PostCard({
           <strong>{post.username || "User"}</strong>
           <span>{formatDate(post.createdAt)}</span>
         </div>
+
+        {isOwner && !hidePostMenu && (
+          <div className="post-menu-wrap">
+            <button
+              type="button"
+              className="post-menu"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label="Post options"
+              aria-expanded={menuOpen}
+            >
+              <MoreVert aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div className="post-menu-dropdown">
+                <button type="button" onClick={handleEdit}>
+                  <EditOutlined aria-hidden="true" />
+                  Edit
+                </button>
+                <button type="button" onClick={handleDelete}>
+                  <DeleteForeverOutlined aria-hidden="true" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {post.text && <p className="post-text">{post.text}</p>}
+      {editing ? (
+        <div className="post-edit-form">
+          <textarea
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            rows={3}
+            autoFocus
+          />
+          <div className="post-edit-actions">
+            <button type="button" className="post-edit-cancel" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="post-edit-save"
+              onClick={handleSaveEdit}
+              disabled={!draftText.trim()}
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      ) : (
+        post.text && <p className="post-text">{post.text}</p>
+      )}
+
+      {actionError && <p className="post-action-error">{actionError}</p>}
 
       {post.image && (
         <div className="post-image">
@@ -85,35 +204,26 @@ function PostCard({
         </div>
       )}
 
-      {pollOptions.length > 0 && (
-        <div className="poll-display">
-          {pollOptions.map((option) => {
-            const votes = option.votes?.length || 0;
-            const percentage = totalVotes
-              ? Math.round((votes / totalVotes) * 100)
-              : 0;
+      {post.video && (
+        <div className="post-image">
+          <video src={post.video} controls preload="metadata" />
+        </div>
+      )}
 
-            return (
-              <button
-                type="button"
-                className={`poll-choice ${
-                  selectedOption?._id === option._id ? "selected" : ""
-                }`}
-                key={option._id}
-                onClick={() => handleVote(option._id)}
-                disabled={voting || Boolean(selectedOption)}
-              >
-                <span className="poll-choice-bar" style={{ width: `${percentage}%` }} />
-                <span className="poll-choice-content">
-                  <strong>{option.text}</strong>
-                  <span>{percentage}%</span>
-                </span>
-              </button>
-            );
-          })}
-          <span className="poll-total">
-            {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
-          </span>
+      {post.poll?.options?.length > 0 && (
+        <div className="poll-display">
+          {post.poll.options.map((option) => (
+            <button
+              type="button"
+              className="poll-choice"
+              key={option._id}
+              onClick={() => handleVote(option._id)}
+              disabled={voting}
+            >
+              <strong>{option.text}</strong>
+              <span>{option.votes?.length || 0} votes</span>
+            </button>
+          ))}
         </div>
       )}
 
@@ -123,17 +233,39 @@ function PostCard({
           onClick={handleLike}
           disabled={liking}
         >
-          <span>{hasLiked ? "♥" : "♡"}</span>
-          {likes.length} {likes.length === 1 ? "like" : "likes"}
+          {hasLiked ? <Favorite aria-hidden="true" /> : <FavoriteBorder aria-hidden="true" />}
+          {likes.length}
         </button>
 
         <button
           className="engagement-btn"
           onClick={() => setShowComments(!showComments)}
         >
-          <span>💬</span>
-          {comments.length}{" "}
-          {comments.length === 1 ? "comment" : "comments"}
+          <CommentOutlined aria-hidden="true" />
+          {comments.length}
+        </button>
+
+        <button
+          className="engagement-btn"
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: post.username, text: post.text || "" });
+            }
+          }}
+        >
+          <SendRounded aria-hidden="true" />
+          Share
+        </button>
+
+        <button
+          className={`engagement-btn bookmark ${post.savedByMe ? "saved" : ""}`}
+          onClick={handleSave}
+          disabled={saving}
+          title={post.savedByMe ? "Remove from saved" : "Save post"}
+          aria-label={post.savedByMe ? "Remove from saved" : "Save post"}
+        >
+          {post.savedByMe ? <Bookmark aria-hidden="true" /> : <BookmarkBorder aria-hidden="true" />}
+          <span>{post.savedByMe ? "Saved" : "Save"}</span>
         </button>
       </div>
 
@@ -142,6 +274,26 @@ function PostCard({
           comments={comments}
           onAddComment={(text) => onAddComment(post._id, text)}
         />
+      )}
+
+      {confirmDelete && (
+        <div className="dialog-backdrop" role="presentation">
+          <div className="delete-dialog" role="alertdialog" aria-modal="true">
+            <div className="delete-dialog-icon">
+              <DeleteForeverOutlined aria-hidden="true" />
+            </div>
+            <h3>Delete this post?</h3>
+            <p>This post and its interactions will be permanently removed.</p>
+            <div className="delete-dialog-actions">
+              <button type="button" onClick={() => setConfirmDelete(false)}>
+                Keep post
+              </button>
+              <button type="button" onClick={confirmPostDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </article>
   );

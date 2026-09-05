@@ -80,6 +80,18 @@ const postSchema = new mongoose.Schema(
       default: "",
     },
 
+    video: {
+      type: String,
+      default: "",
+    },
+
+    savedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     poll: {
       options: {
         type: [pollOptionSchema],

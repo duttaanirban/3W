@@ -36,13 +36,17 @@ const createPost = async (req, res) => {
     }
 
     let imageUrl = "";
+    let videoUrl = "";
 
     if (req.file) {
+      const isVideo =
+        req.file.mimetype.startsWith("video/") ||
+        /\.(mp4|webm|mov)$/i.test(req.file.originalname);
       const uploadResult = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: "3w-social-app/posts",
-            resource_type: "image",
+            resource_type: isVideo ? "video" : "image",
           },
           (error, result) => {
             if (error) {
@@ -56,7 +60,19 @@ const createPost = async (req, res) => {
         uploadStream.end(req.file.buffer);
       });
 
-      imageUrl = uploadResult.secure_url;
+      if (isVideo) {
+        if (uploadResult.duration > 60) {
+          await cloudinary.uploader.destroy(uploadResult.public_id, {
+            resource_type: "video",
+          });
+          return res.status(400).json({
+            message: "Videos must be 60 seconds or shorter",
+          });
+        }
+        videoUrl = uploadResult.secure_url;
+      } else {
+        imageUrl = uploadResult.secure_url;
+      }
     }
 
     const post = await Post.create({
@@ -64,6 +80,7 @@ const createPost = async (req, res) => {
       username: req.user.username,
       text: text?.trim() || "",
       image: imageUrl,
+      video: videoUrl,
       poll,
     });
 
@@ -137,9 +154,35 @@ const votePoll = async (req, res) => {
 
 const getPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
-      .sort({ createdAt: -1 })
-      .lean();
+    const { filter, sort, community } = req.query;
+    let query = {};
+
+    if (community) {
+      const escapedCommunity = String(community).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      query.text = new RegExp(`#${escapedCommunity}(\\s|$)`, "i");
+    }
+
+    if (filter === "following") {
+      const User = require("../models/User");
+      const user = await User.findById(req.user.userId).select("following");
+      query.userId = { $in: user?.following || [] };
+    }
+
+    if (filter === "saved") {
+      query.savedBy = req.user.userId;
+    }
+
+    const posts = await Post.find(query).lean();
+    posts.sort((a, b) => {
+      if (sort === "popular") return (b.likes?.length || 0) - (a.likes?.length || 0);
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    posts.forEach((post) => {
+      post.savedByMe = post.savedBy?.some(
+        (userId) => String(userId) === String(req.user.userId)
+      );
+    });
 
     res.json({
       posts,
@@ -150,6 +193,96 @@ const getPosts = async (req, res) => {
     res.status(500).json({
       message: "Server error while fetching posts",
     });
+  }
+};
+
+const toggleSave = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const savedBy = post.savedBy || [];
+    const index = savedBy.findIndex(
+      (userId) => String(userId) === String(req.user.userId)
+    );
+
+    if (index === -1) savedBy.push(req.user.userId);
+    else savedBy.splice(index, 1);
+    post.savedBy = savedBy;
+
+    await post.save();
+
+    res.json({
+      post: post.toObject(),
+      savedByMe: index === -1,
+    });
+  } catch (error) {
+    console.error("Save post error:", error);
+    res.status(500).json({ message: "Server error while saving post" });
+  }
+};
+
+const updatePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (post.userId.toString() !== req.user.userId.toString()) {
+      return res.status(403).json({ message: "You can only edit your own posts" });
+    }
+
+    const updatedText = typeof text === "string" ? text.trim() : post.text;
+
+    if (
+      !updatedText &&
+      !post.image &&
+      !post.video &&
+      !post.poll?.options?.length
+    ) {
+      return res.status(400).json({ message: "Post cannot be empty" });
+    }
+
+    post.text = updatedText;
+    await post.save();
+
+    res.json({
+      message: "Post updated successfully",
+      post,
+    });
+  } catch (error) {
+    console.error("Update post error:", error);
+    res.status(500).json({ message: "Server error while updating post" });
+  }
+};
+
+const deletePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (post.userId.toString() !== req.user.userId.toString()) {
+      return res.status(403).json({ message: "You can only delete your own posts" });
+    }
+
+    await post.deleteOne();
+
+    res.json({
+      message: "Post deleted successfully",
+      postId: id,
+    });
+  } catch (error) {
+    console.error("Delete post error:", error);
+    res.status(500).json({ message: "Server error while deleting post" });
   }
 };
 
@@ -245,7 +378,10 @@ const addComment = async (req, res) => {
 module.exports = {
   createPost,
   getPosts,
+  updatePost,
+  deletePost,
   toggleLike,
+  toggleSave,
   addComment,
   votePoll,
 };

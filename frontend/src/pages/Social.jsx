@@ -1,40 +1,89 @@
 import { useEffect, useState } from "react";
 import TopBar from "../components/TopBar";
+import Sidebar from "../components/Sidebar";
+import RightPanel from "../components/RightPanel";
+import FeedTabs from "../components/FeedTabs";
 import CreatePost from "../components/CreatePost";
 import PostCard from "../components/PostCard";
-import { getPosts, createPost, toggleLike, addComment, votePoll } from "../api";
+import People from "./People";
+import {
+  getPosts,
+  createPost,
+  updatePost,
+  deletePost,
+  toggleLike,
+  addComment,
+  toggleSave,
+  votePoll,
+  getMyProfile,
+  updateMyProfile,
+  getSuggestions,
+  toggleFollow,
+  getTrendingTopics,
+  getCommunities,
+  getNotifications,
+} from "../api";
 
 function Social({ user, onLogout }) {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [activeView, setActiveView] = useState("home");
+  const [activeTab, setActiveTab] = useState("all");
+  const [activeCommunity, setActiveCommunity] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
+  const [posts, setPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [postsError, setPostsError] = useState("");
+
+  const [profile, setProfile] = useState(null);
+  const [trending, setTrending] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [communities, setCommunities] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  // Sidebar/right-panel data — independent of the feed, loaded once.
   useEffect(() => {
+    getMyProfile().then(setProfile).catch(() => {});
+    getSuggestions().then(setSuggestions).catch(() => {});
+    getTrendingTopics().then(setTrending).catch(() => {});
+    getCommunities().then(setCommunities).catch(() => {});
+    getNotifications().then(setNotifications).catch(() => {});
+  }, []);
+
+  // Feed — reloads whenever the tab or community filter changes.
+  useEffect(() => {
+    if (activeView !== "home" && activeView !== "saved") return;
     const loadPosts = async () => {
-      setLoading(true);
-      setError("");
+      setLoadingPosts(true);
+      setPostsError("");
 
       try {
-        const data = await getPosts();
-        const sorted = [...(data.posts || [])].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
-        setPosts(sorted);
+        const params = {};
+        if (activeTab === "following") params.filter = "following";
+        if (activeTab === "popular") params.sort = "popular";
+        if (activeTab === "latest") params.sort = "latest";
+        if (activeView === "saved") params.filter = "saved";
+        if (activeCommunity) params.community = activeCommunity;
+
+        const data = await getPosts(params);
+        setPosts(data.posts || []);
       } catch (err) {
-        setError(
+        setPostsError(
           err.response?.data?.message || "Couldn't load the feed. Try again."
         );
       } finally {
-        setLoading(false);
+        setLoadingPosts(false);
       }
     };
 
     loadPosts();
-  }, []);
+  }, [activeTab, activeCommunity, activeView]);
 
   const handleCreatePost = async (text, imageFile, poll) => {
     const newPost = await createPost(text, imageFile, poll);
     setPosts((prev) => [newPost, ...prev]);
+    setProfile((prev) =>
+      prev ? { ...prev, postsCount: (prev.postsCount || 0) + 1 } : prev
+    );
   };
 
   const handleToggleLike = async (postId) => {
@@ -47,38 +96,145 @@ function Social({ user, onLogout }) {
     setPosts((prev) => prev.map((p) => (p._id === postId ? updated : p)));
   };
 
+  const handleToggleSave = async (postId) => {
+    const updated = await toggleSave(postId);
+    setPosts((prev) => {
+      if (activeView === "saved" && !updated.savedByMe) {
+        return prev.filter((p) => p._id !== postId);
+      }
+      return prev.map((p) => (p._id === postId ? updated : p));
+    });
+  };
+
   const handleVotePoll = async (postId, optionId) => {
     const updated = await votePoll(postId, optionId);
     setPosts((prev) => prev.map((p) => (p._id === postId ? updated : p)));
   };
 
+  const handleUpdatePost = async (postId, text) => {
+    const updated = await updatePost(postId, text);
+    setPosts((prev) => prev.map((p) => (p._id === postId ? updated : p)));
+  };
+
+  const handleDeletePost = async (postId) => {
+    await deletePost(postId);
+    setPosts((prev) => prev.filter((p) => p._id !== postId));
+    setProfile((prev) =>
+      prev ? { ...prev, postsCount: Math.max(0, (prev.postsCount || 0) - 1) } : prev
+    );
+  };
+
+  const handleFollow = async (userId) => {
+    const { isFollowing } = await toggleFollow(userId);
+    setSuggestions((prev) =>
+      prev.map((s) => (s._id === userId ? { ...s, isFollowing } : s))
+    );
+  };
+
+  const handleSaveBio = async (bio) => {
+    const updated = await updateMyProfile({ bio });
+    setProfile(updated);
+  };
+
+  const visiblePosts = searchQuery.trim()
+    ? posts.filter((p) =>
+        (p.text || "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (p.username || "").toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : posts;
+
+  const renderPostFeed = () => (
+    <>
+      {loadingPosts && <p className="feed-status">Loading posts...</p>}
+      {postsError && <p className="feed-status error">{postsError}</p>}
+
+      {!loadingPosts && !postsError && visiblePosts.length === 0 && (
+        <p className="feed-status">
+          {searchQuery.trim()
+            ? "No posts match your search."
+            : activeView === "saved"
+              ? "Posts you save will appear here."
+              : "No posts yet. Be the first to share something."}
+        </p>
+      )}
+
+      <div className="feed">
+        {visiblePosts.map((post) => (
+          <PostCard
+            key={post._id}
+            post={post}
+            currentUsername={user?.username}
+            currentUserId={user?.id || user?._id}
+            onToggleLike={handleToggleLike}
+            onAddComment={handleAddComment}
+            onToggleSave={handleToggleSave}
+            onVotePoll={handleVotePoll}
+            onUpdatePost={handleUpdatePost}
+            onDeletePost={handleDeletePost}
+            hidePostMenu={activeView === "saved"}
+          />
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div className="social-app">
-      <TopBar user={user} onLogout={onLogout} />
+      <TopBar
+        user={user}
+        onLogout={onLogout}
+        notifications={notifications}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-      <main className="social-main">
-        <CreatePost onCreatePost={handleCreatePost} />
+      <div className="social-layout">
+        <Sidebar
+          activeView={activeView}
+          onChangeView={setActiveView}
+          communities={communities}
+          activeCommunity={activeCommunity}
+          onSelectCommunity={(id) => {
+            setActiveCommunity((prev) => (prev === id ? null : id));
+            setActiveView("home");
+          }}
+        />
 
-        {loading && <p className="feed-status">Loading posts...</p>}
-        {error && <p className="feed-status error">{error}</p>}
+        <main className="social-main">
+          {activeView === "people" ? (
+            <People suggestions={suggestions} onFollow={handleFollow} />
+          ) : activeView === "saved" ? (
+            <section className="saved-page">
+              <div className="saved-page-heading">
+                <h1>Saved posts</h1>
+                <p>Your private collection of posts worth keeping.</p>
+              </div>
+              {renderPostFeed()}
+            </section>
+          ) : activeView !== "home" ? (
+            <div className="coming-soon">
+              <h2>{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h2>
+              <p>This page isn't built yet — only the Home feed is wired up so far.</p>
+            </div>
+          ) : (
+            <>
+              <CreatePost username={user?.username} onCreatePost={handleCreatePost} />
 
-        {!loading && !error && posts.length === 0 && (
-          <p className="feed-status">No posts yet. Be the first to share something.</p>
-        )}
+              <FeedTabs active={activeTab} onChange={setActiveTab} />
 
-        <div className="feed">
-          {posts.map((post) => (
-            <PostCard
-              key={post._id}
-              post={post}
-              currentUsername={user?.username}
-              onToggleLike={handleToggleLike}
-              onAddComment={handleAddComment}
-              onVotePoll={handleVotePoll}
-            />
-          ))}
-        </div>
-      </main>
+              {renderPostFeed()}
+            </>
+          )}
+        </main>
+
+        <RightPanel
+          profile={profile}
+          trending={trending}
+          suggestions={suggestions}
+          onFollow={handleFollow}
+          onSaveBio={handleSaveBio}
+        />
+      </div>
     </div>
   );
 }

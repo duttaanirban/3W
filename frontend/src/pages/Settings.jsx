@@ -1,5 +1,6 @@
 import { useState } from "react";
 import DarkModeOutlined from "@mui/icons-material/DarkModeOutlined";
+import DeleteForeverOutlined from "@mui/icons-material/DeleteForeverOutlined";
 import Logout from "@mui/icons-material/Logout";
 import NotificationsNone from "@mui/icons-material/NotificationsNone";
 import Person from "@mui/icons-material/Person";
@@ -7,10 +8,13 @@ import SaveOutlined from "@mui/icons-material/SaveOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import WbSunnyOutlined from "@mui/icons-material/WbSunnyOutlined";
 
-function Settings({ profile, theme, onThemeChange, onSaveBio, onLogout }) {
+function Settings({ profile, theme, onThemeChange, onSaveBio, onDeleteAccount, onLogout }) {
   const [bio, setBio] = useState(profile?.bio || "");
   const [savingBio, setSavingBio] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [notifications, setNotifications] = useState(() => ({
     likes: localStorage.getItem("setting-notifications-likes") !== "false",
     comments: localStorage.getItem("setting-notifications-comments") !== "false",
@@ -31,6 +35,18 @@ function Settings({ profile, theme, onThemeChange, onSaveBio, onLogout }) {
   const updateNotification = (key, value) => {
     setNotifications((current) => ({ ...current, [key]: value }));
     localStorage.setItem(`setting-notifications-${key}`, String(value));
+  };
+
+  const deleteAccount = async () => {
+    setDeletingAccount(true);
+    setDeleteError("");
+
+    try {
+      await onDeleteAccount();
+    } catch (error) {
+      setDeleteError(error.response?.data?.message || "Couldn't delete your account. Try again.");
+      setDeletingAccount(false);
+    }
   };
 
   return (
@@ -117,10 +133,45 @@ function Settings({ profile, theme, onThemeChange, onSaveBio, onLogout }) {
         </div>
       </div>
 
-      <button type="button" className="settings-logout" onClick={onLogout}>
-        <Logout aria-hidden="true" />
-        Log out
-      </button>
+      <div className="settings-account-actions">
+        <button type="button" className="settings-logout" onClick={onLogout}>
+          <Logout aria-hidden="true" />
+          Log out
+        </button>
+
+        <button
+          type="button"
+          className="settings-delete-account"
+          onClick={() => {
+            setDeleteError("");
+            setConfirmDelete(true);
+          }}
+        >
+          <DeleteForeverOutlined aria-hidden="true" />
+          Delete account
+        </button>
+      </div>
+
+      {confirmDelete && (
+        <div className="dialog-backdrop" role="presentation">
+          <div className="delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-account-title">
+            <div className="delete-dialog-icon">
+              <DeleteForeverOutlined aria-hidden="true" />
+            </div>
+            <h3 id="delete-account-title">Delete your account?</h3>
+            <p>This permanently removes your profile, posts, likes, comments, and notifications.</p>
+            {deleteError && <p className="post-action-error">{deleteError}</p>}
+            <div className="delete-dialog-actions">
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={deletingAccount}>
+                Cancel
+              </button>
+              <button type="button" className="delete-account-confirm" onClick={deleteAccount} disabled={deletingAccount}>
+                {deletingAccount ? "Deleting..." : "Delete account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

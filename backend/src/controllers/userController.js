@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Post = require("../models/Post");
+const Notification = require("../models/Notification");
 
 const getMyProfile = async (req, res) => {
   const user = await User.findById(req.user.userId).select("username email bio followers following");
@@ -120,10 +121,43 @@ const toggleFollow = async (req, res) => {
   res.json({ isFollowing });
 };
 
+const deleteMyAccount = async (req, res) => {
+  const userId = req.user.userId;
+
+  const user = await User.findById(userId).select("_id");
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  await Promise.all([
+    Post.deleteMany({ userId }),
+    Post.updateMany(
+      {},
+      {
+        $pull: {
+          likes: { userId },
+          comments: { userId },
+          savedBy: userId,
+        },
+      }
+    ),
+    User.updateMany(
+      {},
+      { $pull: { followers: userId, following: userId } }
+    ),
+    Notification.deleteMany({
+      $or: [{ recipientId: userId }, { actorId: userId }],
+    }),
+  ]);
+
+  await User.findByIdAndDelete(userId);
+
+  res.json({ message: "Account deleted successfully" });
+};
+
 module.exports = {
   getMyProfile,
   updateMyProfile,
   getSuggestions,
   getUserProfile,
   toggleFollow,
+  deleteMyAccount,
 };

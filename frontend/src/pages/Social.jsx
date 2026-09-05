@@ -24,6 +24,7 @@ import {
   getCommunities,
   getNotifications,
   markNotificationRead,
+  deleteMyAccount,
 } from "../api";
 
 function Social({ user, onLogout }) {
@@ -147,6 +148,12 @@ function Social({ user, onLogout }) {
     setProfile(updated);
   };
 
+  const handleDeleteAccount = async () => {
+    await deleteMyAccount();
+    onLogout();
+    window.location.reload();
+  };
+
   const handleThemeChange = (nextTheme) => {
     localStorage.setItem("theme", nextTheme);
     setTheme(nextTheme);
@@ -249,6 +256,7 @@ function Social({ user, onLogout }) {
               theme={theme}
               onThemeChange={handleThemeChange}
               onSaveBio={handleSaveBio}
+              onDeleteAccount={handleDeleteAccount}
               onLogout={onLogout}
             />
           ) : activeView === "saved" ? (

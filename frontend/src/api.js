@@ -101,6 +101,9 @@ export const getMyProfile = () => api.get("/users/me").then((r) => r.data);
 export const updateMyProfile = (updates) =>
   api.put("/users/me", updates).then((r) => r.data);
 
+export const deleteMyAccount = () =>
+  api.delete("/users/me").then((r) => r.data);
+
 // --- social graph ---
 export const getSuggestions = () =>
   api.get("/users/suggestions").then((r) => r.data);

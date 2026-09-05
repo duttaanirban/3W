@@ -11,7 +11,22 @@ const discoveryRoutes = require("./routes/discoveryRoutes");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS origin is not allowed"));
+    },
+  })
+);
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);

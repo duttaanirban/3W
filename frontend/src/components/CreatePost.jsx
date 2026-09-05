@@ -1,4 +1,8 @@
 import { useRef, useState } from "react";
+import EmojiEmotionsOutlined from "@mui/icons-material/EmojiEmotionsOutlined";
+import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import PollOutlined from "@mui/icons-material/PollOutlined";
+import SendRounded from "@mui/icons-material/SendRounded";
 
 function CreatePost({ onCreatePost }) {
   const [text, setText] = useState("");
@@ -138,8 +142,9 @@ function CreatePost({ onCreatePost }) {
             className="tool-icon"
             onClick={() => fileInputRef.current?.click()}
             title="Add photo"
+            aria-label="Add photo"
           >
-            📷
+            <PhotoCameraOutlined aria-hidden="true" />
           </button>
 
           <input
@@ -150,8 +155,13 @@ function CreatePost({ onCreatePost }) {
             hidden
           />
 
-          <button type="button" className="tool-icon" title="Add feeling">
-            ☺
+          <button
+            type="button"
+            className="tool-icon"
+            title="Add feeling"
+            aria-label="Add feeling"
+          >
+            <EmojiEmotionsOutlined aria-hidden="true" />
           </button>
 
           <button
@@ -159,13 +169,14 @@ function CreatePost({ onCreatePost }) {
             className={`tool-icon ${showPoll ? "active" : ""}`}
             onClick={togglePoll}
             title="Create a poll"
+            aria-label="Create a poll"
           >
-            ☰
+            <PollOutlined aria-hidden="true" />
           </button>
         </div>
 
         <button type="submit" className="post-button" disabled={!canSubmit}>
-          <span>➤</span>
+          <SendRounded aria-hidden="true" />
           {submitting ? "Posting..." : "Post"}
         </button>
       </div>

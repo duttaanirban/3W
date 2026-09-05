@@ -1,21 +1,68 @@
+import { useEffect, useRef, useState } from "react";
+import KeyboardArrowDown from "@mui/icons-material/KeyboardArrowDown";
+import Logout from "@mui/icons-material/Logout";
+
 function TopBar({ user, onLogout }) {
-  const initial = (user?.username || "U").charAt(0).toUpperCase();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  const username = user?.username || "User";
+  const initial = username.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <header className="topbar">
-      <div className="topbar-brand">Social</div>
+    <div className="navbar-shell">
+      <nav className="navbar-pill">
+        <span className="navbar-brand">Social</span>
 
-      <div className="topbar-actions">
-        <div className="avatar avatar-small" title={user?.username}>
-          {initial}
+        <div className="navbar-profile" ref={menuRef}>
+          <button
+            className="navbar-profile-trigger"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            title="Open account menu"
+          >
+            <span className="navbar-avatar">{initial}</span>
+            <span className="navbar-username">{username}</span>
+            <KeyboardArrowDown
+              className={`navbar-chevron ${menuOpen ? "open" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {menuOpen && (
+            <div className="navbar-dropdown">
+              <div className="navbar-dropdown-header">
+                <span className="navbar-avatar">{initial}</span>
+                <div>
+                  <strong>{username}</strong>
+                  {user?.email && <span>{user.email}</span>}
+                </div>
+              </div>
+
+              <button
+                className="navbar-dropdown-item logout"
+                onClick={onLogout}
+              >
+                <Logout aria-hidden="true" />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
-        <span className="topbar-username">{user?.username}</span>
-
-        <button className="logout-button" onClick={onLogout}>
-          Logout
-        </button>
-      </div>
-    </header>
+      </nav>
+    </div>
   );
 }
 

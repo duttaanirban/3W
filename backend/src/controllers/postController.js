@@ -1,20 +1,45 @@
 const Post = require("../models/Post");
+const cloudinary = require("../config/cloudinary");
 
 const createPost = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text } = req.body;
 
-    if (!text?.trim() && !image) {
+    if (!text?.trim() && !req.file) {
       return res.status(400).json({
         message: "Post must contain text, an image, or both",
       });
+    }
+
+    let imageUrl = "";
+
+    if (req.file) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "3w-social-app/posts",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        );
+
+        uploadStream.end(req.file.buffer);
+      });
+
+      imageUrl = uploadResult.secure_url;
     }
 
     const post = await Post.create({
       userId: req.user.userId,
       username: req.user.username,
       text: text?.trim() || "",
-      image: image || "",
+      image: imageUrl,
     });
 
     res.status(201).json({
@@ -22,12 +47,25 @@ const createPost = async (req, res) => {
       post,
     });
   } catch (error) {
-    console.error("Create post error:", error);
+  console.error("Create post error:", error);
 
-    res.status(500).json({
-      message: "Server error while creating post",
-    });
+  if (error.http_code) {
+    console.error("HTTP Code:", error.http_code);
   }
+
+  if (error.response) {
+    console.error("Cloudinary response:", error.response);
+  }
+
+  if (error.headers) {
+    console.error("Cloudinary headers:", error.headers);
+  }
+
+  res.status(500).json({
+    message: "Server error while creating post",
+    error: error.message,
+  });
+}
 };
 
 const getPosts = async (req, res) => {

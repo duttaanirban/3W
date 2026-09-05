@@ -6,6 +6,7 @@ import FeedTabs from "../components/FeedTabs";
 import CreatePost from "../components/CreatePost";
 import PostCard from "../components/PostCard";
 import People from "./People";
+import Settings from "./Settings";
 import {
   getPosts,
   createPost,
@@ -39,6 +40,7 @@ function Social({ user, onLogout }) {
   const [suggestions, setSuggestions] = useState([]);
   const [communities, setCommunities] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
   // Sidebar/right-panel data — independent of the feed, loaded once.
   useEffect(() => {
@@ -136,6 +138,11 @@ function Social({ user, onLogout }) {
     setProfile(updated);
   };
 
+  const handleThemeChange = (nextTheme) => {
+    localStorage.setItem("theme", nextTheme);
+    setTheme(nextTheme);
+  };
+
   const visiblePosts = searchQuery.trim()
     ? posts.filter((p) =>
         (p.text || "").toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
@@ -179,7 +186,7 @@ function Social({ user, onLogout }) {
   );
 
   return (
-    <div className="social-app">
+    <div className={`social-app ${theme === "light" ? "light-theme" : ""}`}>
       <TopBar
         user={user}
         onLogout={onLogout}
@@ -203,6 +210,14 @@ function Social({ user, onLogout }) {
         <main className="social-main">
           {activeView === "people" ? (
             <People suggestions={suggestions} onFollow={handleFollow} />
+          ) : activeView === "settings" ? (
+            <Settings
+              profile={profile}
+              theme={theme}
+              onThemeChange={handleThemeChange}
+              onSaveBio={handleSaveBio}
+              onLogout={onLogout}
+            />
           ) : activeView === "saved" ? (
             <section className="saved-page">
               <div className="saved-page-heading">

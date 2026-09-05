@@ -159,6 +159,15 @@
   color: var(--text);
 }
 
+.social-app.light-theme {
+  --text: #172033;
+  --muted: #667085;
+  --border: #dce2ec;
+  --surface: #ffffff;
+  --surface-2: #f2f5fa;
+  --background: #f6f8fc;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -855,6 +864,248 @@
 
 .social-main {
   min-width: 0;
+}
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-heading,
+.settings-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-heading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 25px;
+}
+
+.settings-heading-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.settings-heading-icon svg {
+  font-size: 27px;
+}
+
+.settings-heading .eyebrow {
+  margin: 0;
+}
+
+.settings-heading h1 {
+  margin: 4px 0 4px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.settings-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-section {
+  padding: 22px;
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+
+.settings-section-heading > svg {
+  color: var(--primary);
+  font-size: 21px;
+}
+
+.settings-section-heading h2 {
+  margin: 0 0 3px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.settings-section-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.settings-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.settings-profile-row > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-profile-row strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.settings-profile-row span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.settings-field textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 11px;
+  outline: 0;
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-field textarea:focus {
+  border-color: var(--primary);
+}
+
+.settings-field small {
+  align-self: flex-end;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.settings-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.settings-primary-button,
+.settings-logout {
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-primary-button {
+  background: var(--primary);
+  color: white;
+}
+
+.settings-primary-button svg,
+.settings-logout svg {
+  font-size: 17px;
+}
+
+.settings-success {
+  color: #22c55e;
+  font-size: 11px;
+}
+
+.theme-options {
+  display: flex;
+  gap: 10px;
+}
+
+.theme-option {
+  flex: 1;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.theme-option.active {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary);
+}
+
+.theme-option svg {
+  font-size: 19px;
+}
+
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.settings-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-toggle strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.settings-toggle small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.settings-logout {
+  align-self: flex-start;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
 }
 
 .people-page {

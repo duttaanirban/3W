@@ -6,6 +6,7 @@ const {
   getPosts,
   toggleLike,
   addComment,
+  votePoll,
 } = require("../controllers/postController");
 
 const protect = require("../middleware/authMiddleware");
@@ -24,5 +25,8 @@ router.post("/:id/like", protect, toggleLike);
 
 // Add comment
 router.post("/:id/comments", protect, addComment);
+
+// Vote in a poll
+router.post("/:id/poll/:optionId/vote", protect, votePoll);
 
 module.exports = router;

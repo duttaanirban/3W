@@ -1,13 +1,28 @@
 import { useState } from "react";
 import CommentSection from "./CommentSection";
 
-function PostCard({ post, currentUsername, onToggleLike, onAddComment }) {
+function PostCard({
+  post,
+  currentUsername,
+  onToggleLike,
+  onAddComment,
+  onVotePoll,
+}) {
   const [showComments, setShowComments] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [voting, setVoting] = useState(false);
   const [renderedAt] = useState(() => Date.now());
 
   const likes = post.likes || [];
   const comments = post.comments || [];
+  const pollOptions = post.poll?.options || [];
+  const totalVotes = pollOptions.reduce(
+    (total, option) => total + (option.votes?.length || 0),
+    0
+  );
+  const selectedOption = pollOptions.find((option) =>
+    option.votes?.some((vote) => vote.username === currentUsername)
+  );
   const hasLiked = currentUsername
     ? likes.some((like) => like.username === currentUsername)
     : false;
@@ -38,6 +53,17 @@ function PostCard({ post, currentUsername, onToggleLike, onAddComment }) {
     }
   };
 
+  const handleVote = async (optionId) => {
+    if (voting || selectedOption) return;
+    setVoting(true);
+
+    try {
+      await onVotePoll(post._id, optionId);
+    } finally {
+      setVoting(false);
+    }
+  };
+
   return (
     <article className="post-card">
       <div className="post-header">
@@ -56,6 +82,38 @@ function PostCard({ post, currentUsername, onToggleLike, onAddComment }) {
       {post.image && (
         <div className="post-image">
           <img src={post.image} alt="Post" />
+        </div>
+      )}
+
+      {pollOptions.length > 0 && (
+        <div className="poll-display">
+          {pollOptions.map((option) => {
+            const votes = option.votes?.length || 0;
+            const percentage = totalVotes
+              ? Math.round((votes / totalVotes) * 100)
+              : 0;
+
+            return (
+              <button
+                type="button"
+                className={`poll-choice ${
+                  selectedOption?._id === option._id ? "selected" : ""
+                }`}
+                key={option._id}
+                onClick={() => handleVote(option._id)}
+                disabled={voting || Boolean(selectedOption)}
+              >
+                <span className="poll-choice-bar" style={{ width: `${percentage}%` }} />
+                <span className="poll-choice-content">
+                  <strong>{option.text}</strong>
+                  <span>{percentage}%</span>
+                </span>
+              </button>
+            );
+          })}
+          <span className="poll-total">
+            {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+          </span>
         </div>
       )}
 

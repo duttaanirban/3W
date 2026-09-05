@@ -62,4 +62,7 @@ export const toggleLike = (postId) =>
 export const addComment = (postId, text) =>
   api.post(`/posts/${postId}/comments`, { text }).then((r) => r.data.post);
 
+export const votePoll = (postId, optionId) =>
+  api.post(`/posts/${postId}/poll/${optionId}/vote`).then((r) => r.data.post);
+
 export default api;

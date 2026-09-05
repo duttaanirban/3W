@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import TopBar from "../components/TopBar";
 import CreatePost from "../components/CreatePost";
 import PostCard from "../components/PostCard";
-import { getPosts, createPost, toggleLike, addComment } from "../api";
+import { getPosts, createPost, toggleLike, addComment, votePoll } from "../api";
 
 function Social({ user, onLogout }) {
   const [posts, setPosts] = useState([]);
@@ -47,6 +47,11 @@ function Social({ user, onLogout }) {
     setPosts((prev) => prev.map((p) => (p._id === postId ? updated : p)));
   };
 
+  const handleVotePoll = async (postId, optionId) => {
+    const updated = await votePoll(postId, optionId);
+    setPosts((prev) => prev.map((p) => (p._id === postId ? updated : p)));
+  };
+
   return (
     <div className="social-app">
       <TopBar user={user} onLogout={onLogout} />
@@ -69,6 +74,7 @@ function Social({ user, onLogout }) {
               currentUsername={user?.username}
               onToggleLike={handleToggleLike}
               onAddComment={handleAddComment}
+              onVotePoll={handleVotePoll}
             />
           ))}
         </div>

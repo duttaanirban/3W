@@ -4,10 +4,34 @@ const cloudinary = require("../config/cloudinary");
 const createPost = async (req, res) => {
   try {
     const { text } = req.body;
+    let poll = null;
 
-    if (!text?.trim() && !req.file) {
+    if (req.body.poll) {
+      try {
+        poll = JSON.parse(req.body.poll);
+      } catch {
+        return res.status(400).json({ message: "Invalid poll data" });
+      }
+
+      const options = Array.isArray(poll.options)
+        ? poll.options.map((option) => String(option).trim()).filter(Boolean)
+        : [];
+      const uniqueOptions = [...new Set(options)];
+
+      if (uniqueOptions.length < 2 || uniqueOptions.length > 4) {
+        return res.status(400).json({
+          message: "A poll must contain 2 to 4 unique options",
+        });
+      }
+
+      poll = {
+        options: uniqueOptions.map((option) => ({ text: option, votes: [] })),
+      };
+    }
+
+    if (!text?.trim() && !req.file && !poll) {
       return res.status(400).json({
-        message: "Post must contain text, an image, or both",
+        message: "Post must contain text, an image, a poll, or a combination",
       });
     }
 
@@ -40,6 +64,7 @@ const createPost = async (req, res) => {
       username: req.user.username,
       text: text?.trim() || "",
       image: imageUrl,
+      poll,
     });
 
     res.status(201).json({
@@ -66,6 +91,48 @@ const createPost = async (req, res) => {
     error: error.message,
   });
 }
+};
+
+const votePoll = async (req, res) => {
+  try {
+    const { id, optionId } = req.params;
+    const post = await Post.findById(id);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (!post.poll?.options?.length) {
+      return res.status(400).json({ message: "This post does not have a poll" });
+    }
+
+    const selectedOption = post.poll.options.id(optionId);
+
+    if (!selectedOption) {
+      return res.status(404).json({ message: "Poll option not found" });
+    }
+
+    post.poll.options.forEach((option) => {
+      option.votes = option.votes.filter(
+        (vote) => vote.userId.toString() !== req.user.userId.toString()
+      );
+    });
+
+    selectedOption.votes.push({
+      userId: req.user.userId,
+      username: req.user.username,
+    });
+
+    await post.save();
+
+    res.json({
+      message: "Poll vote recorded",
+      post,
+    });
+  } catch (error) {
+    console.error("Poll vote error:", error);
+    res.status(500).json({ message: "Server error while voting in poll" });
+  }
 };
 
 const getPosts = async (req, res) => {
@@ -180,4 +247,5 @@ module.exports = {
   getPosts,
   toggleLike,
   addComment,
+  votePoll,
 };
